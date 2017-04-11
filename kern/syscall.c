@@ -379,7 +379,7 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 	recvr->env_ipc_from = curenv->env_id;
 	recvr->env_ipc_perm = 0;
 	if((srcva && (srcva < (void*)UTOP)) && ((recvr->env_ipc_dstva) && (recvr->env_ipc_dstva < (void*)UTOP))){
-		cprintf("\n Sending page to the receiver \n");
+		// cprintf("\n Sending page to the receiver \n"); [OBSOLETE]
 		if(PGOFF(srcva)) {
 			cprintf("\n Not pageAligned\n");
 			return -E_INVAL;
