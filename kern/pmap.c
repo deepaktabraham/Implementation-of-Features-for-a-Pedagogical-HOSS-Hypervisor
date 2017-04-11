@@ -461,7 +461,6 @@ page_alloc(int alloc_flags)
         else
             page_free_list = phypage->pp_link;
         phypage->pp_link = NULL;
-        //cprintf("%d %d \n", alloc_flags, ALLOC_ZERO);
         if(alloc_flags & ALLOC_ZERO)
             memset(page2kva(phypage),'\0',PGSIZE);
         if(alloc_flags == 0)
@@ -703,7 +702,6 @@ page_insert(pml4e_t *pml4e, struct PageInfo *pp, void *va, int perm)
 	// Fill this function in
 	pte_t* page_entry = pml4e_walk(pml4e, va, 1);
 
-	//cprintf("Inside page_insert = %p\n",page_entry);
     if (page_entry) {
         if (PTE_ADDR(*page_entry) == page2pa(pp)){
             *page_entry = PTE_ADDR(*page_entry) | perm | PTE_P;
@@ -1172,22 +1170,18 @@ page_check(void)
 	// should be no free memory
 	assert(!page_alloc(0));
 
-	//cprintf("998 = %d\n",pp1->pp_ref);
 	// there is no page allocated at address 0
 	assert(page_lookup(boot_pml4e, (void *) 0x0, &ptep) == NULL);
 
-	//cprintf("1002 = %d\n",pp1->pp_ref);
 	// there is no free memory, so we can't allocate a page table 
 	assert(page_insert(boot_pml4e, pp1, 0x0, 0) < 0);
 
-	//cprintf("1006 = %d\n",pp1->pp_ref);
 	// free pp0 and try again: pp0 should be used for page table
 	page_free(pp0);
 	assert(page_insert(boot_pml4e, pp1, 0x0, 0) < 0);
 	page_free(pp2);
 	page_free(pp3);
 	
-	//cprintf("pp1 ref count = %d\n",pp1->pp_ref);
 	//cprintf("pp0 ref count = %d\n",pp0->pp_ref);
 	//cprintf("pp2 ref count = %d\n",pp2->pp_ref);
 	assert(page_insert(boot_pml4e, pp1, 0x0, 0) == 0);
@@ -1197,7 +1191,6 @@ page_check(void)
 	assert(pp0->pp_ref == 1);
 	assert(pp2->pp_ref == 1);
 	//should be able to map pp3 at PGSIZE because pp0 is already allocated for page table
-	//cprintf("1041 = %d\n",pp1->pp_ref);
 	assert(page_insert(boot_pml4e, pp3, (void*) PGSIZE, 0) == 0);
 	assert(check_va2pa(boot_pml4e, PGSIZE) == page2pa(pp3));
 	assert(pp3->pp_ref == 2);
@@ -1210,7 +1203,6 @@ page_check(void)
 	assert(check_va2pa(boot_pml4e, PGSIZE) == page2pa(pp3));
 	assert(pp3->pp_ref == 2);
 
-	//cprintf("1031 = %d\n",pp1->pp_ref);
 	// pp3 should NOT be on the free list
 	// could happen in ref counts are handled sloppily in page_insert
 	assert(!page_alloc(0));
@@ -1227,7 +1219,6 @@ page_check(void)
 	assert(*pml4e_walk(boot_pml4e, (void*) PGSIZE, 0) & PTE_U);
 	assert(boot_pml4e[0] & PTE_U);
 
-	//cprintf("1047 = %d\n",pp1->pp_ref);
 
 	// should not be able to map at PTSIZE because need free page for page table
 	assert(page_insert(boot_pml4e, pp0, (void*) PTSIZE, 0) < 0);
@@ -1243,7 +1234,6 @@ page_check(void)
 	assert(pp1->pp_ref == 2);
 	assert(pp3->pp_ref == 1);
 
-	//cprintf("1062 = %d\n",pp1->pp_ref);
 
 	// unmapping pp1 at 0 should keep pp1 at PGSIZE
 	page_remove(boot_pml4e, 0x0);
@@ -1258,7 +1248,6 @@ page_check(void)
 	assert(pp1->pp_ref);
 	assert(pp1->pp_link == NULL);
 
-	//cprintf("1077= %d\n",pp1->pp_ref);
 
 	// unmapping pp1 at PGSIZE should free it
 	page_remove(boot_pml4e, (void*) PGSIZE);
@@ -1284,7 +1273,6 @@ page_check(void)
 	assert(pp2->pp_ref == 0);
 #endif
 
-	//cprintf("pp1 ref count = %d\n",pp1->pp_ref);
 	// forcibly take pp3 back
 	assert(PTE_ADDR(boot_pml4e[0]) == page2pa(pp3));
 	boot_pml4e[0] = 0;

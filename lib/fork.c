@@ -73,7 +73,13 @@ duppage(envid_t envid, unsigned pn)
 	pte_t entry = uvpt[pn];
 	void* addr = (void*) ((uintptr_t)pn * PGSIZE);
 	int perm = entry & PTE_SYSCALL;
-	if((perm & PTE_COW) || (perm & PTE_W)) {
+	if(perm& PTE_SHARE) {
+		r = sys_page_map(0, addr, envid, addr, perm);
+		if(r < 0) {
+			panic("Something went wrong on duppage %e",r);
+		}
+	}
+	else if((perm & PTE_COW) || (perm & PTE_W)) {
 		perm &= ~PTE_W;
 		perm |= PTE_COW;
 		r = sys_page_map(0, addr, envid, addr, perm);
