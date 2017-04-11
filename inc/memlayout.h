@@ -144,6 +144,9 @@
 // The location of the user-level STABS data structure
 #define USTABDATA	(PTSIZE)
 
+// Physical address of startup code for non-boot CPUs (APs)
+#define MPENTRY_PADDR	0x7000
+
 #ifndef __ASSEMBLER__
 
 typedef uint64_t pml4e_t;

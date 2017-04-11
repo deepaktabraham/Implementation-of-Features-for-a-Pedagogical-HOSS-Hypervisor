@@ -6,7 +6,7 @@
 # Translation: cr3->pml4->pdpe->pgdir
 # We set the PTE_MBZ bit in pgdir to skip the last step	
 .code32
-.set pml4,  pml4virt
+.set pml4, pml4virt
 .set pdpt1,  pml4 + 0x1000
 .set pdpt2,  pml4 + 2*0x1000
 .set pde1, pml4 + 3*0x1000
@@ -28,7 +28,7 @@ _head64:
     movl $CR4_PAE,%eax
     movl %eax,%cr4
 
-# build an early boot pml4 at 0x8000
+# build an early boot pml4 at physical address pml4phys 
 
     #initializing the page tables
     movl $pml4,%edi
