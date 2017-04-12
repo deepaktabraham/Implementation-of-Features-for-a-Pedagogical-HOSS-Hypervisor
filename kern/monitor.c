@@ -14,8 +14,8 @@
 #include <kern/dwarf_api.h>
 #include <kern/trap.h>
 
-
 #define CMDBUF_SIZE	80	// enough for one VGA text line
+
 
 struct Command {
 	const char *name;
@@ -154,4 +154,3 @@ monitor(struct Trapframe *tf)
 				break;
 	}
 }
-

@@ -10,38 +10,38 @@ struct regs
 	uintptr_t esp;
 };
 
-#define SAVE_REGS(base) \
-	"\tmovq %%r14, 0x8("base")\n" \
-	"\tmovq %%r13, 0x10("base")\n" \
-	"\tmovq %%r12, 0x18("base")\n" \
-	"\tmovq %%r11, 0x20("base")\n" \
-	"\tmovq %%r10, 0x28("base")\n" \
-	"\tmovq %%r9, 0x30("base")\n" \
-	"\tmovq %%r8, 0x38("base")\n" \
-	"\tmovq %%rsi, 0x40("base")\n" \
-	"\tmovq %%rdi, 0x48("base")\n" \
-	"\tmovq %%rbp, 0x50("base")\n" \
-	"\tmovq %%rdx, 0x58("base")\n" \
-	"\tmovq %%rcx, 0x60("base")\n" \
-	"\tmovq %%rbx, 0x68("base")\n" \
-	"\tmovq %%rax, 0x70("base")\n" \
+#define SAVE_REGS(base)				\
+	"\tmovq %%r14, 0x8("base")\n"		\
+	"\tmovq %%r13, 0x10("base")\n"		\
+	"\tmovq %%r12, 0x18("base")\n"		\
+	"\tmovq %%r11, 0x20("base")\n"		\
+	"\tmovq %%r10, 0x28("base")\n"		\
+	"\tmovq %%r9, 0x30("base")\n"		\
+	"\tmovq %%r8, 0x38("base")\n"		\
+	"\tmovq %%rsi, 0x40("base")\n"		\
+	"\tmovq %%rdi, 0x48("base")\n"		\
+	"\tmovq %%rbp, 0x50("base")\n"		\
+	"\tmovq %%rdx, 0x58("base")\n"		\
+	"\tmovq %%rcx, 0x60("base")\n"		\
+	"\tmovq %%rbx, 0x68("base")\n"		\
+	"\tmovq %%rax, 0x70("base")\n"		\
 	"\tmovq %%rsp, 0x88("base")\n"
 
-#define LOAD_REGS(base) \
-	"\tmovq 0x8("base"), %%r14\n" \
-	"\tmovq 0x10("base"), %%r13\n" \
-	"\tmovq 0x18("base"), %%r12 \n" \
-	"\tmovq 0x20("base"), %%r11\n" \
-	"\tmovq 0x28("base"), %%r10\n" \
-	"\tmovq 0x30("base"), %%r9\n" \
-	"\tmovq 0x38("base"), %%r8\n" \
-	"\tmovq 0x40("base"), %%rsi\n" \
-	"\tmovq 0x48("base"), %%rdi\n" \
-	"\tmovq 0x50("base"), %%rbp\n" \
-	"\tmovq 0x58("base"), %%rdx\n" \
-	"\tmovq 0x60("base"), %%rcx\n" \
-	"\tmovq 0x68("base"), %%rbx\n" \
-	"\tmovq 0x70("base"), %%rax\n" \
+#define LOAD_REGS(base)				\
+	"\tmovq 0x8("base"), %%r14\n"		\
+	"\tmovq 0x10("base"), %%r13\n"		\
+	"\tmovq 0x18("base"), %%r12 \n"		\
+	"\tmovq 0x20("base"), %%r11\n"		\
+	"\tmovq 0x28("base"), %%r10\n"		\
+	"\tmovq 0x30("base"), %%r9\n"		\
+	"\tmovq 0x38("base"), %%r8\n"		\
+	"\tmovq 0x40("base"), %%rsi\n"		\
+	"\tmovq 0x48("base"), %%rdi\n"		\
+	"\tmovq 0x50("base"), %%rbp\n"		\
+	"\tmovq 0x58("base"), %%rdx\n"		\
+	"\tmovq 0x60("base"), %%rcx\n"		\
+	"\tmovq 0x68("base"), %%rbx\n"		\
+	"\tmovq 0x70("base"), %%rax\n"		\
 	"\tmovq 0x88("base"), %%rsp\n"
 
 static struct regs before, during, after;

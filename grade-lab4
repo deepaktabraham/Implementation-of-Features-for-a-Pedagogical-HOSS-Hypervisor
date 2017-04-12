@@ -85,7 +85,7 @@ def test_faultallocbad():
 @test(5)
 def test_faultnostack():
     r.user_test("faultnostack")
-    r.match(E(".$E1. user_mem_check assertion failure for va ef7fff.."),
+    r.match(E(".$E1. user_mem_check assertion failure for va ef7ff..."),
             E(".$E1. free env $E1"))
 
 @test(5)

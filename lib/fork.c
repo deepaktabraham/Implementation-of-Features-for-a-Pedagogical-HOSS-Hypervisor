@@ -23,6 +23,7 @@ pgfault(struct UTrapframe *utf)
 	// Hint:
 	//   Use the read-only page table mappings at uvpt
 	//   (see <inc/memlayout.h>).
+
 	// LAB 4: Your code here.
 	pte_t entry = uvpt[VPN(addr)];
 	// Allocate a new page, map it at a temporary location (PFTEMP),
@@ -31,6 +32,8 @@ pgfault(struct UTrapframe *utf)
 	// Hint:
 	//   You should make three system calls.
 	//   No need to explicitly delete the old page's mapping.
+
+	// LAB 4: Your code here.
 	if((err & FEC_WR) && (uvpt[VPN(addr)] & PTE_COW)) {
 		if(sys_page_alloc(0, (void*)PFTEMP, PTE_U|PTE_P|PTE_W) == 0) {
 			void *pg_addr = ROUNDDOWN(addr, PGSIZE);
@@ -52,7 +55,6 @@ pgfault(struct UTrapframe *utf)
 	else {
 			panic("pgfault...wrong error %e", err);	
 	}
-	// LAB 4: Your code here.
 }
 
 //
@@ -70,6 +72,8 @@ static int
 duppage(envid_t envid, unsigned pn)
 {
 	int r;
+	
+	// LAB 4: Your code here.
 	pte_t entry = uvpt[pn];
 	void* addr = (void*) ((uintptr_t)pn * PGSIZE);
 	int perm = entry & PTE_SYSCALL;
@@ -97,8 +101,6 @@ duppage(envid_t envid, unsigned pn)
 			panic("Something went wrong on duppage %e",r);
 		}
 	}
-	// LAB 4: Your code here.
-	//panic("duppage not implemented");
 	return 0;
 }
 
@@ -121,6 +123,7 @@ duppage(envid_t envid, unsigned pn)
 envid_t
 fork(void)
 {
+	// LAB 4: Your code here.
 	int r=0;
 	set_pgfault_handler(pgfault);
 	envid_t childid = sys_exofork();
@@ -192,8 +195,6 @@ fork(void)
 	if (r < 0)
 		panic("\n couldn't call fork %e\n", r);
 	
-	// LAB 4: Your code here.
-	//panic("fork not implemented");
 	return childid;
 }
 

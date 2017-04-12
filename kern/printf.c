@@ -17,10 +17,10 @@ int
 vcprintf(const char *fmt, va_list ap)
 {
 	int cnt = 0;
-    va_list aq;
-    va_copy(aq,ap);
+	va_list aq;
+	va_copy(aq,ap);
 	vprintfmt((void*)putch, &cnt, fmt, aq);
-    va_end(aq);
+	va_end(aq);
 	return cnt;
 
 }
@@ -31,8 +31,8 @@ cprintf(const char *fmt, ...)
 	va_list ap;
 	int cnt;
 	va_start(ap, fmt);
-    va_list aq;
-    va_copy(aq,ap);
+	va_list aq;
+	va_copy(aq,ap);
 	cnt = vcprintf(fmt, aq);
 	va_end(aq);
 

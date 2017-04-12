@@ -8,7 +8,7 @@
 #include <inc/env.h>
 
 // Maximum number of CPUs
-#define NCPU  8
+#define NCPU  4
 
 // Values of status in struct Cpu
 enum {
@@ -23,6 +23,8 @@ struct CpuInfo {
 	volatile unsigned cpu_status;   // The status of the CPU
 	struct Env *cpu_env;            // The currently-running environment.
 	struct Taskstate cpu_ts;        // Used by x86 to find stack for interrupt
+    bool is_vmx_root;               // Is the CPU in VMX root mode?
+    uintptr_t vmxon_region;         // KVA of vmxon region.
 };
 
 // Initialized in mpconfig.c

@@ -2,6 +2,10 @@
 #include <inc/string.h>
 #include <inc/lib.h>
 
+#ifdef VMM_GUEST
+#include  <inc/vmx.h>
+#endif
+
 #define debug 0
 
 union Fsipc fsipcbuf __attribute__((aligned(PGSIZE)));
@@ -39,8 +43,10 @@ struct Dev devfile =
 	.dev_id =	'f',
 	.dev_name =	"file",
 	.dev_read =	devfile_read,
-	.dev_close = devfile_flush,
+	.dev_close =	devfile_flush,
 	.dev_stat =	devfile_stat,
+	.dev_write =	devfile_write,
+	.dev_trunc =	devfile_trunc
 };
 
 // Open a file (or directory).
@@ -49,7 +55,6 @@ struct Dev devfile =
 // 	The file descriptor index on success
 // 	-E_BAD_PATH if the path is too long (>= MAXPATHLEN)
 // 	< 0 for other errors.
-
 int
 open(const char *path, int mode)
 {
@@ -69,6 +74,7 @@ open(const char *path, int mode)
 	// Return the file descriptor index.
 	// If any step after fd_alloc fails, use fd_close to free the
 	// file descriptor.
+
 	// LAB 5: Your code here
 	struct Fd *new_fd;
 	int r = fd_alloc(&new_fd);
@@ -113,7 +119,6 @@ devfile_read(struct Fd *fd, void *buf, size_t n)
 	// bytes read will be written back to fsipcbuf by the file
 	// system server.
 	// LAB 5: Your code here
-	// panic("devfile_read not implemented");
 	fsipcbuf.read.req_fileid =  fd->fd_file.id;
 	fsipcbuf.read.req_n = n;
 	ssize_t nbytes = fsipc(FSREQ_READ, NULL);
@@ -121,6 +126,22 @@ devfile_read(struct Fd *fd, void *buf, size_t n)
 		memmove(buf, fsipcbuf.readRet.ret_buf, nbytes);
 	}
 	return nbytes;
+}
+
+// Write at most 'n' bytes from 'buf' to 'fd' at the current seek position.
+//
+// Returns:
+//	 The number of bytes successfully written.
+//	 < 0 on error.
+static ssize_t
+devfile_write(struct Fd *fd, const void *buf, size_t n)
+{
+	// Make an FSREQ_WRITE request to the file system server.  Be
+	// careful: fsipcbuf.write.req_buf is only so large, but
+	// remember that write is always allowed to write *fewer*
+	// bytes than requested.
+	// LAB 5: Your code here
+	panic("devfile_write not implemented");
 }
 
 static int
@@ -136,3 +157,76 @@ devfile_stat(struct Fd *fd, struct Stat *st)
 	st->st_isdir = fsipcbuf.statRet.ret_isdir;
 	return 0;
 }
+
+// Truncate or extend an open file to 'size' bytes
+static int
+devfile_trunc(struct Fd *fd, off_t newsize)
+{
+	fsipcbuf.set_size.req_fileid = fd->fd_file.id;
+	fsipcbuf.set_size.req_size = newsize;
+	return fsipc(FSREQ_SET_SIZE, NULL);
+}
+
+// Delete a file
+int
+remove(const char *path)
+{
+	if (strlen(path) >= MAXPATHLEN)
+		return -E_BAD_PATH;
+	strcpy(fsipcbuf.remove.req_path, path);
+	return fsipc(FSREQ_REMOVE, NULL);
+}
+
+// Synchronize disk with buffer cache
+int
+sync(void)
+{
+	// Ask the file server to update the disk
+	// by writing any dirty blocks in the buffer cache.
+
+	return fsipc(FSREQ_SYNC, NULL);
+}
+
+//Copy a file from src to dest
+int
+copy(char *src, char *dest)
+{
+	int r;
+	int fd_src, fd_dest;
+	char buffer[512];	//keep this small
+	ssize_t read_size;
+	ssize_t write_size;
+	fd_src = open(src, O_RDONLY);
+	if (fd_src < 0) {	//error
+		cprintf("cp open src error:%e\n", fd_src);
+		return fd_src;
+	}
+	
+	fd_dest = open(dest, O_CREAT | O_WRONLY);
+	if (fd_dest < 0) {	//error
+		cprintf("cp create dest  error:%e\n", fd_dest);
+		close(fd_src);
+		return fd_dest;
+	}
+	
+	while ((read_size = read(fd_src, buffer, 512)) > 0) {
+		write_size = write(fd_dest, buffer, read_size);
+		if (write_size < 0) {
+			cprintf("cp write error:%e\n", write_size);
+			close(fd_src);
+			close(fd_dest);
+			return write_size;
+		}		
+	}
+	if (read_size < 0) {
+		cprintf("cp read src error:%e\n", read_size);
+		close(fd_src);
+		close(fd_dest);
+		return read_size;
+	}
+	close(fd_src);
+	close(fd_dest);
+	return 0;
+	
+}
+

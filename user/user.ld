@@ -1,5 +1,5 @@
 /* Simple linker script for JOS user-level programs.
-   See the GNU ld 'info' manual ("info ld") to learn the syntax. */
+See the GNU ld 'info' manual ("info ld") to learn the syntax. */
 
 OUTPUT_FORMAT("elf64-x86-64", "elf64-x86-64", "elf64-x86-64")
 OUTPUT_ARCH(i386:x86-64)
@@ -7,66 +7,66 @@ ENTRY(_start)
 
 SECTIONS
 {
-	/* Load programs at this address: "." means the current address */
-	. = 0x800020;
+    /* Load programs at this address: "." means the current address */
+    . = 0x800020;
 
-	.text : {
-		*(.text .stub .text.* .gnu.linkonce.t.*)
-	}
+    .text : {
+        *(.text .stub .text.* .gnu.linkonce.t.*)
+}
 
-	PROVIDE(etext = .);	/* Define the 'etext' symbol to this value */
+PROVIDE(etext = .);	/* Define the 'etext' symbol to this value */
 
-	.rodata : {
-		*(.rodata .rodata.* .gnu.linkonce.r.*)
-	}
+.rodata : {
+    *(.rodata .rodata.* .gnu.linkonce.r.*)
+}
 
-	/* Adjust the address for the data segment to the next page */
-	. = ALIGN(0x1000);
+/* Adjust the address for the data segment to the next page */
+. = ALIGN(0x1000);
 
-	.data : {
-		*(.data)
-	}
+.data : {
+    *(.data)
+}
 
-	PROVIDE(edata = .);
+PROVIDE(edata = .);
 
-	.bss : {
-		*(.bss)
-	}
+.bss : {
+    *(.bss)
+}
 
-	PROVIDE(end = .);
+PROVIDE(end = .);
 
 
-	/* Place debugging symbols so that they can be found by
-	 * the kernel debugger.
-	 * Specifically, the four words at 0x200000 mark the beginning of
-	 * the stabs, the end of the stabs, the beginning of the stabs
-	 * string table, and the end of the stabs string table, respectively.
-	 */
+/* Place debugging symbols so that they can be found by
+ * the kernel debugger.
+ * Specifically, the four words at 0x200000 mark the beginning of
+ * the stabs, the end of the stabs, the beginning of the stabs
+ * string table, and the end of the stabs string table, respectively.
+ */
 
-	/* .stab_info 0x200000 : { */
-	/* 	QUAD(__STAB_BEGIN__); */
-	/* 	QUAD(__STAB_END__); */
-	/* 	QUAD(__STABSTR_BEGIN__); */
-	/* 	QUAD(__STABSTR_END__); */
-	/* } */
+/* .stab_info 0x200000 : { */
+/* 	QUAD(__STAB_BEGIN__); */
+/* 	QUAD(__STAB_END__); */
+/* 	QUAD(__STABSTR_BEGIN__); */
+/* 	QUAD(__STABSTR_END__); */
+/* } */
 
-	/* .stab : { */
-	/* 	__STAB_BEGIN__ = DEFINED(__STAB_BEGIN__) ? __STAB_BEGIN__ : .; */
-	/* 	*(.stab); */
-	/* 	__STAB_END__ = DEFINED(__STAB_END__) ? __STAB_END__ : .; */
-	/* 	BYTE(0)		/1* Force the linker to allocate space */
-	/* 			   for this section *1/ */
-	/* } */
+/* .stab : { */
+/* 	__STAB_BEGIN__ = DEFINED(__STAB_BEGIN__) ? __STAB_BEGIN__ : .; */
+/* 	*(.stab); */
+/* 	__STAB_END__ = DEFINED(__STAB_END__) ? __STAB_END__ : .; */
+/* 	BYTE(0)		/1* Force the linker to allocate space */
+/* 			   for this section *1/ */
+/* } */
 
-	/* .stabstr : { */
-	/* 	__STABSTR_BEGIN__ = DEFINED(__STABSTR_BEGIN__) ? __STABSTR_BEGIN__ : .; */
-	/* 	*(.stabstr); */
-	/* 	__STABSTR_END__ = DEFINED(__STABSTR_END__) ? __STABSTR_END__ : .; */
-	/* 	BYTE(0)		/1* Force the linker to allocate space */
-	/* 			   for this section *1/ */
-	/* } */
+/* .stabstr : { */
+/* 	__STABSTR_BEGIN__ = DEFINED(__STABSTR_BEGIN__) ? __STABSTR_BEGIN__ : .; */
+/* 	*(.stabstr); */
+/* 	__STABSTR_END__ = DEFINED(__STABSTR_END__) ? __STABSTR_END__ : .; */
+/* 	BYTE(0)		/1* Force the linker to allocate space */
+/* 			   for this section *1/ */
+/* } */
 
-	/DISCARD/ : {
-		*(.note.GNU-stack .comment)
-	}
+/DISCARD/ : {
+    *(.note.GNU-stack .comment)
+}
 }

@@ -6,13 +6,21 @@ FSOFILES := 		$(OBJDIR)/fs/ide.o \
 			$(OBJDIR)/fs/fs.o \
 			$(OBJDIR)/fs/serv.o \
 			$(OBJDIR)/fs/test.o \
+			$(OBJDIR)/fs/vmx_host.o \
 
 ROOTAPPS := $(OBJDIR)/user/init
 
 FSIMGTXTFILES :=	fs/newmotd \
-			fs/motd \
-			fs/robig
+			fs/motd 
 
+ifdef GUEST_KERN
+FSIMGTXTFILES +=	fs/motd_guest
+else
+FSIMGTXTFILES +=	fs/robig
+endif
+
+FSIMGTXTFILES :=	$(FSIMGTXTFILES) \
+			fs/index.html
 
 USERAPPS :=		$(USERAPPS) \
 			$(OBJDIR)/user/cat \
@@ -29,7 +37,11 @@ USERAPPS :=		$(USERAPPS) \
 			$(OBJDIR)/user/testpipe \
 			$(OBJDIR)/user/testpteshare \
 			$(OBJDIR)/user/testshell \
-			$(OBJDIR)/user/hello \
+			$(OBJDIR)/user/hello
+			
+ifndef GUEST_KERN
+USERAPPS +=		$(OBJDIR)/user/vmmanager 
+endif
 
 FSIMGTXTFILES :=	$(FSIMGTXTFILES) \
 			fs/lorem \
@@ -37,8 +49,21 @@ FSIMGTXTFILES :=	$(FSIMGTXTFILES) \
 			fs/testshell.key \
 			fs/testshell.sh
 
+ifndef GUEST_KERN
+GUESTKERNELS = $(GUESTDIR)/$(OBJDIR)/kern/kernel
+GUESTKERNELS += $(GUESTDIR)/$(OBJDIR)/boot/boot
+GUESTKERNELS += $(GUESTDIR)/$(OBJDIR)/fs/clean-fs.img
+GUESTKERNELS += $(GUESTDIR)/$(OBJDIR)/fs/fs.img
+endif
+USERAPPS += $(OBJDIR)/user/vmm
 
+
+
+ifndef GUEST_KERN
+FSIMGFILES := $(FSIMGTXTFILES) $(USERAPPS) $(ROOTAPPS) $(GUESTKERNELS)
+else
 FSIMGFILES := $(FSIMGTXTFILES) $(USERAPPS) $(ROOTAPPS)
+endif
 
 $(OBJDIR)/fs/%.o: fs/%.c fs/fs.h inc/lib.h $(OBJDIR)/.vars.USER_CFLAGS
 	@echo + cc[USER] $<
@@ -62,7 +87,12 @@ $(OBJDIR)/fs/fsformat: fs/fsformat.c
 $(OBJDIR)/fs/clean-fs.img: $(OBJDIR)/fs/fsformat $(FSIMGFILES)
 	@echo + mk $(OBJDIR)/fs/clean-fs.img
 	$(V)mkdir -p $(@D)
-	$(V)$(OBJDIR)/fs/fsformat $(OBJDIR)/fs/clean-fs.img 10240 $(FSIMGTXTFILES) -b $(USERAPPS) -sb $(ROOTAPPS)
+
+ifndef GUEST_KERN
+	$(V)$(OBJDIR)/fs/fsformat $(OBJDIR)/fs/clean-fs.img 4096  $(FSIMGTXTFILES) -b $(USERAPPS) -sb $(ROOTAPPS) -g $(GUESTKERNELS)
+else
+	$(V)$(OBJDIR)/fs/fsformat $(OBJDIR)/fs/clean-fs.img 512 $(FSIMGTXTFILES) -b $(USERAPPS) -sb $(ROOTAPPS)
+endif
 
 $(OBJDIR)/fs/fs.img: $(OBJDIR)/fs/clean-fs.img
 	@echo + cp $(OBJDIR)/fs/clean-fs.img $@

@@ -92,7 +92,7 @@ spawn(const char *prog, const char **argv)
 	// Read elf header
 	elf = (struct Elf*) elf_buf;
 	if (readn(fd, elf_buf, sizeof(elf_buf)) != sizeof(elf_buf)
-	    || elf->e_magic != ELF_MAGIC) {
+            || elf->e_magic != ELF_MAGIC) {
 		close(fd);
 		cprintf("elf magic %08x want %08x\n", elf->e_magic, ELF_MAGIC);
 		return -E_NOT_EXEC;
@@ -261,7 +261,7 @@ error:
 
 static int
 map_segment(envid_t child, uintptr_t va, size_t memsz,
-	int fd, size_t filesz, off_t fileoffset, int perm)
+	    int fd, size_t filesz, off_t fileoffset, int perm)
 {
 	int i, r;
 	void *blk;

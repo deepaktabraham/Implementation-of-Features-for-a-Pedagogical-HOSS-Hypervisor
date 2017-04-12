@@ -6,6 +6,7 @@
 #include <inc/types.h>
 #include <inc/trap.h>
 #include <inc/memlayout.h>
+#include <inc/vmx.h>
 
 typedef int32_t envid_t;
 extern pml4e_t *boot_pml4e;
@@ -43,6 +44,8 @@ enum {
 enum EnvType {
 	ENV_TYPE_USER = 0,
 	ENV_TYPE_FS,		// File system server
+	ENV_TYPE_NS,		// Network server
+	ENV_TYPE_GUEST,     // A VMM guest OS
 };
 
 struct Env {
@@ -56,8 +59,9 @@ struct Env {
 	int env_cpunum;			// The CPU that the env is running on
 
 	// Address space
-	pml4e_t *env_pml4e;		// Kernel virtual address of page dir
-    physaddr_t env_cr3;
+	pml4e_t *env_pml4e;		// Kernel virtual address of top-level page dir,
+	// or root of extended page tables in guest mode.
+	physaddr_t env_cr3;
 
 	// Exception handling
 	void *env_pgfault_upcall;	// Page fault upcall entry point
@@ -68,7 +72,8 @@ struct Env {
 	uint32_t env_ipc_value;		// Data value sent to us
 	envid_t env_ipc_from;		// envid of the sender
 	int env_ipc_perm;		// Perm of page mapping received
-    uint8_t *elf;
+	uint8_t *elf;
+	struct VmxGuestInfo env_vmxinfo;
 };
 
 #endif // !JOS_INC_ENV_H

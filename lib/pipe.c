@@ -34,11 +34,11 @@ pipe(int pfd[2])
 
 	// allocate the file descriptor table entries
 	if ((r = fd_alloc(&fd0)) < 0
-	    || (r = sys_page_alloc(0, fd0, PTE_P|PTE_W|PTE_U|PTE_SHARE)) < 0)
+            || (r = sys_page_alloc(0, fd0, PTE_P|PTE_W|PTE_U|PTE_SHARE)) < 0)
 		goto err;
 
 	if ((r = fd_alloc(&fd1)) < 0
-	    || (r = sys_page_alloc(0, fd1, PTE_P|PTE_W|PTE_U|PTE_SHARE)) < 0)
+            || (r = sys_page_alloc(0, fd1, PTE_P|PTE_W|PTE_U|PTE_SHARE)) < 0)
 		goto err1;
 
 	// allocate the pipe structure as first data page in both
@@ -62,13 +62,13 @@ pipe(int pfd[2])
 	pfd[1] = fd2num(fd1);
 	return 0;
 
-    err3:
+err3:
 	sys_page_unmap(0, va);
-    err2:
+err2:
 	sys_page_unmap(0, fd1);
-    err1:
+err1:
 	sys_page_unmap(0, fd0);
-    err:
+err:
 	return r;
 }
 

@@ -13,9 +13,11 @@
 #include <kern/picirq.h>
 #include <kern/cpu.h>
 #include <kern/spinlock.h>
+#include <kern/time.h>
+#include <inc/vmx.h>
 
 extern uintptr_t gdtdesc_64;
-static struct Taskstate ts;
+struct Taskstate ts;
 extern struct Segdesc gdt[];
 extern long gdt_pd;
 
@@ -156,8 +158,8 @@ trap_init(void)
 
 
 	// LAB 3: Your code here.
-    idt_pd.pd_lim = sizeof(idt)-1;
-    idt_pd.pd_base = (uint64_t)idt;
+	idt_pd.pd_lim = sizeof(idt)-1;
+	idt_pd.pd_base = (uint64_t)idt;
 	// Per-CPU setup
 	trap_init_percpu();
 }
@@ -332,7 +334,7 @@ trap_dispatch(struct Trapframe *tf)
 void
 trap(struct Trapframe *tf)
 {
-    //struct Trapframe *tf = &tf_;
+	//struct Trapframe *tf = &tf_;
 	// The environment may have set DF and some versions
 	// of GCC rely on DF being clear
 	asm volatile("cld" ::: "cc");
@@ -366,13 +368,13 @@ trap(struct Trapframe *tf)
 			curenv = NULL;
 			sched_yield();
 		}
+
 		// Copy trap frame (which is currently on the stack)
 		// into 'curenv->env_tf', so that running the environment
 		// will restart at the trap point.
 		curenv->env_tf = *tf;
 		// The trapframe on the stack should be ignored from here on.
 		tf = &curenv->env_tf;
-		
 	}
 
 	// Record that tf is the last real trapframe so

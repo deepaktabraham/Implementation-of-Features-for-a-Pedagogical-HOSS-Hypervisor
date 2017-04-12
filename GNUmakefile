@@ -5,7 +5,17 @@
 #	Recursive Make Considered Harmful
 #	http://aegis.sourceforge.net/auug97.pdf
 #
+
+
+ifdef GUEST_KERN
+OBJDIR := vmm/guest/obj
+GUSETOBJDIR := vmm/guest/obj
+else
 OBJDIR := obj
+endif
+GUESTDIR := vmm/guest
+
+
 
 # Run 'make V=1' to turn on verbose commands, or 'make V=0' to turn them off.
 ifeq ($(V),1)
@@ -85,6 +95,10 @@ CFLAGS := $(CFLAGS) $(DEFS) $(LABDEFS) -O0 -fno-builtin -I$(TOP) -MD
 CFLAGS += -fno-omit-frame-pointer -mno-red-zone
 CFLAGS += -Wall -Wno-format -Wno-unused -Werror -gdwarf-2
 
+CFLAGS += -I$(TOP)/net/lwip/include \
+	  -I$(TOP)/net/lwip/include/ipv4 \
+	  -I$(TOP)/net/lwip/jos
+
 # Add -fno-stack-protector if the option exists.
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 
@@ -118,6 +132,14 @@ KERN_CFLAGS := $(CFLAGS) -DJOS_KERNEL -DDWARF_SUPPORT -gdwarf-2 -mcmodel=large -
 BOOT_CFLAGS := $(CFLAGS) -DJOS_KERNEL -gdwarf-2 -m32
 USER_CFLAGS := $(CFLAGS) -DJOS_USER -gdwarf-2 -mcmodel=large -m64
 
+ifdef GUEST_KERN
+KERN_CFLAGS += -DVMM_GUEST
+USER_CFLAGS += -DVMM_GUEST
+else
+KERN_CFLAGS += -DVMM_HOST
+USER_CFLAGS += -DVMM_HOST
+endif
+
 # Update .vars.X if variable X has changed since the last make run.
 #
 # Rules that use variable X should depend on $(OBJDIR)/.vars.X.  If
@@ -129,6 +151,7 @@ $(OBJDIR)/.vars.%: FORCE
 .PHONY: FORCE
 
 
+
 # Include Makefrags for subdirectories
 include boot/Makefrag
 # include boot1/Makefrag
@@ -136,9 +159,17 @@ include kern/Makefrag
 include lib/Makefrag
 include user/Makefrag
 include fs/Makefrag
+include net/Makefrag
+ifndef GUEST_KERN
+include vmm/Makefrag
+endif
+
 
 
 CPUS ?= 1
+
+PORT7	:= $(shell expr $(GDBPORT) + 1)
+PORT80	:= $(shell expr $(GDBPORT) + 2)
 
 QEMUOPTS = -m 256 -hda $(OBJDIR)/kern/kernel.img -serial mon:stdio -gdb tcp::$(GDBPORT)
 QEMUOPTS += $(shell if $(QEMU) -nographic -help | grep -q '^-D '; then echo '-D qemu.log'; fi)
@@ -146,6 +177,8 @@ IMAGES = $(OBJDIR)/kern/kernel.img
 QEMUOPTS += -smp $(CPUS)
 QEMUOPTS += -hdb $(OBJDIR)/fs/fs.img
 IMAGES += $(OBJDIR)/fs/fs.img
+QEMUOPTS += -net user -net nic,model=e1000 -redir tcp:$(PORT7)::7 \
+	   -redir tcp:$(PORT80)::80 -redir udp:$(PORT7)::7 -net dump,file=qemu.pcap
 QEMUOPTS += $(QEMUEXTRA)
 
 
@@ -154,6 +187,34 @@ QEMUOPTS += $(QEMUEXTRA)
 	sed -e "s/localhost:1234/localhost:$(GDBPORT)/" -e "s/jumpto_longmode/*0x$(LONGMODE)/" < $^ > $@
 
 pre-qemu: .gdbinit
+#	QEMU doesn't truncate the pcap file.  Work around this.
+	@rm -f qemu.pcap
+
+
+guestvm: $(GUESTDIR)/$(OBJDIR)/kern/kernel $(GUESTDIR)/$(OBJDIR)/boot/boot
+
+BOCHS := bochs
+BOCHSOPTS = -q
+BOCHSOPTS += $(BOCHSEXTRA)
+
+bochsrc: .bochsrc.tmpl
+#	BOCHS expects absolute paths
+	$(eval KERN_PATH := $(shell pwd)/$(OBJDIR)/kern/kernel.img)
+	$(eval FS_PATH := $(shell pwd)/$(OBJDIR)/fs/fs.img)
+	sed -e "s,path_to_kernel_img,$(KERN_PATH)," -e "s,path_to_disk_img,$(FS_PATH)," < $^ > $@
+
+bochs: $(IMAGES) bochsrc
+	$(BOCHS) $(BOCHSOPTS)
+
+bochs-nox: $(IMAGES) bochsrc
+	$(BOCHS) $(BOCHSOPTS) 'display_library: term'
+
+bochs-gdb: $(IMAGES) bochsrc
+	$(BOCHS) $(BOCHSOPTS) 'gdbstub: enabled=1, port=1234'
+
+bochs-nox-gdb: $(IMAGES) bochsrc
+	$(BOCHS) $(BOCHSOPTS) 'display_library: term' 'gdbstub: enabled=1, port=1234'
+
 
 qemu: $(IMAGES) pre-qemu
 	$(QEMU) $(QEMUOPTS)
@@ -184,7 +245,8 @@ print-gdbport:
 
 # For deleting the build
 clean:
-	rm -rf $(OBJDIR) .gdbinit jos.in qemu.log jos.out*
+	rm -rf $(OBJDIR) .gdbinit jos.in qemu.log jos.out* bochs.*
+	rm -rf bochsrc $(GUESTDIR)/$(OBJDIR)
 
 realclean: clean
 	rm -rf lab$(LAB).tar.gz \
@@ -234,6 +296,7 @@ handin-prep:
 	@./handin-prep
 
 # For test runs
+prep-net_%: override INIT_CFLAGS+=-DTEST_NO_NS
 
 prep-%:
 	$(V)$(MAKE) "INIT_CFLAGS=${INIT_CFLAGS} -DTEST=`case $* in *_*) echo $*;; *) echo user_$*;; esac`" $(IMAGES)
@@ -249,6 +312,23 @@ run-%-nox: prep-% pre-qemu
 
 run-%: prep-% pre-qemu
 	$(QEMU) $(QEMUOPTS)
+
+# For network connections
+which-ports:
+	@echo "Local port $(PORT7) forwards to JOS port 7 (echo server)"
+	@echo "Local port $(PORT80) forwards to JOS port 80 (web server)"
+
+nc-80:
+	nc localhost $(PORT80)
+
+nc-7:
+	nc localhost $(PORT7)
+
+telnet-80:
+	telnet localhost $(PORT80)
+
+telnet-7:
+	telnet localhost $(PORT7)
 
 # This magic automatically generates makefile dependencies
 # for header files included from C source files we compile,

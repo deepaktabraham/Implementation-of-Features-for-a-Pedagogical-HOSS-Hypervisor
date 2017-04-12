@@ -34,7 +34,7 @@
 .set PROT_MODE_CSEG, 0x8	# protected mode kernel code segment selector
 .set PROT_MODE_DSEG, 0x10	# protected mode kernel data segment selector
 
-.set pml4, pml4virt
+.set pml4, pml4phys
 
 .code16           
 .globl mpentry_start

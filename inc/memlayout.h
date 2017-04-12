@@ -47,7 +47,7 @@
  *    MMIOLIM ------>  +------------------------------+ 0x8003e00000    --+
  *                     |       Memory-mapped I/O      | RW/--  PTSIZE
  * ULIM, MMIOBASE -->  +------------------------------+ 0x8003c00000
- *                     |  Cur. Page Table (User R-)   | R-/R-  PTSIZE
+ *                     |  PageInfo structs (User R-)  | R-/R-  PTSIZE
  *    UPAGES    ---->  +------------------------------+ 0x8000a00000
  *                     |           RO ENVS            | R-/R-  PTSIZE
  * UTOP,UENVS ------>  +------------------------------+ 0x8000800000
@@ -61,13 +61,13 @@
  *    USTACKTOP  --->  +------------------------------+ 0xef7fe000
  *                     |      Normal User Stack       | RW/RW  PGSIZE
  *                     +------------------------------+ 0xef7fd000
- *                     | n                             |
+ *                     |                              |
  *                     |                              |
  *                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *                     .                              .
  *                     .                              .
  *                     .                              .
- *      N               |~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|
+ *                     |~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|
  *                     |     Program Data & Heap      |
  *    UTEXT -------->  +------------------------------+ 0x00800000
  *    PFTEMP ------->  |       Empty Memory (*)       |        PTSIZE
@@ -189,13 +189,13 @@ typedef LIST_ENTRY(Page) Page_LIST_entry_t;
  */
 struct PageInfo {
 	// Next page on the free list.
-        struct PageInfo *pp_link;
-
+	struct PageInfo *pp_link;
+	
 	// pp_ref is the count of pointers (usually in page table entries)
 	// to this page, for pages allocated using page_alloc.
 	// Pages allocated at boot time using pmap.c's
 	// boot_alloc do not have valid reference count fields.
-
+	
 	uint16_t pp_ref;
 };
 

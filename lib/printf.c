@@ -17,49 +17,49 @@
 // and prevent interrupts from causing context switches
 // in the middle of a console output line and such.
 struct printbuf {
-	int idx;	// current buffer index
-	int cnt;	// total bytes printed so far
-	char buf[256];
+    int idx;	// current buffer index
+    int cnt;	// total bytes printed so far
+    char buf[256];
 };
 
 
-static void
+    static void
 putch(int ch, struct printbuf *b)
 {
-	b->buf[b->idx++] = ch;
-	if (b->idx == 256-1) {
-		sys_cputs(b->buf, b->idx);
-		b->idx = 0;
-	}
-	b->cnt++;
+    b->buf[b->idx++] = ch;
+    if (b->idx == 256-1) {
+        sys_cputs(b->buf, b->idx);
+        b->idx = 0;
+    }
+    b->cnt++;
 }
 
-int
+    int
 vcprintf(const char *fmt, va_list ap)
 {
-	struct printbuf b;
-	va_list aq;
-	va_copy(aq,ap);
-	b.idx = 0;
-	b.cnt = 0;
-	vprintfmt((void*)putch, &b, fmt, aq);
-	sys_cputs(b.buf, b.idx);
-	va_end(aq);
+    struct printbuf b;
+    va_list aq;
+    va_copy(aq,ap);
+    b.idx = 0;
+    b.cnt = 0;
+    vprintfmt((void*)putch, &b, fmt, aq);
+    sys_cputs(b.buf, b.idx);
+    va_end(aq);
 
-	return b.cnt;
+    return b.cnt;
 }
 
-int
+    int
 cprintf(const char *fmt, ...)
 {
-	va_list ap;
-	int cnt;
-	va_list aq;
-	va_start(ap, fmt);
-	va_copy(aq,ap);
-	cnt = vcprintf(fmt, aq);
-	va_end(aq);
+    va_list ap;
+    int cnt;
+    va_list aq;
+    va_start(ap, fmt);
+    va_copy(aq,ap);
+    cnt = vcprintf(fmt, aq);
+    va_end(aq);
 
-	return cnt;
+    return cnt;
 }
 

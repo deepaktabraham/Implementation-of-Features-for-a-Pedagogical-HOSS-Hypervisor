@@ -73,10 +73,10 @@ char *argvalue(struct Argstate *);
 //	argument 'duh'
 
 struct Argstate {
-	int *argc;
-	const char **argv;
-	const char *curarg;
-	const char *argvalue;
+    int *argc;
+    const char **argv;
+    const char *curarg;
+    const char *argvalue;
 };
 
 #endif

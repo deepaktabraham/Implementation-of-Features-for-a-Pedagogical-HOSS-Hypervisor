@@ -41,7 +41,7 @@ argnext(struct Argstate *args)
 	args->curarg++;
 	return arg;
 
-    endofargs:
+endofargs:
 	args->curarg = 0;
 	return -1;
 }

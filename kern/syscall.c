@@ -11,6 +11,11 @@
 #include <kern/syscall.h>
 #include <kern/console.h>
 #include <kern/sched.h>
+#include <kern/time.h>
+#ifndef VMM_GUEST
+#include <vmm/ept.h>
+#include <vmm/vmx.h>
+#endif
 
 // Print a string to the system console.
 // The string is exactly 'len' characters long.
@@ -95,7 +100,6 @@ sys_exofork(void)
 	child->env_tf.tf_regs.reg_rax = 0; //setting return value for child
 	child->env_parent_id = curenv->env_id;
 	return child->env_id;
-	//panic("sys_exofork not implemented");
 }
 
 // Set envid's env_status to status, which must be ENV_RUNNABLE
@@ -112,7 +116,9 @@ sys_env_set_status(envid_t envid, int status)
 	// envid to a struct Env.
 	// You should set envid2env's third argument to 1, which will
 	// check whether the current environment has permission to set
-	// envid's status.	
+	// envid's status.
+
+	// LAB 4: Your code here.
 	if((status != ENV_RUNNABLE) && (status != ENV_NOT_RUNNABLE)) {
 		cprintf("\n improper status %e\n", -E_INVAL);
 		return -E_INVAL;
@@ -125,8 +131,6 @@ sys_env_set_status(envid_t envid, int status)
 	}
 	envnow->env_status = status;
 	return 0;
-	// LAB 4: Your code here.
-	//panic("sys_env_set_status not implemented");
 }
 
 // Set envid's trap frame to 'tf'.
@@ -166,6 +170,7 @@ sys_env_set_trapframe(envid_t envid, struct Trapframe *tf)
 static int
 sys_env_set_pgfault_upcall(envid_t envid, void *func)
 {
+	// LAB 4: Your code here.
 	struct Env *newenv;
 	int r = envid2env(envid, &newenv, 1);
 	if (r<0) {
@@ -174,8 +179,6 @@ sys_env_set_pgfault_upcall(envid_t envid, void *func)
 	}
 	newenv->env_pgfault_upcall = func;
 	return 0;
-	// LAB 4: Your code here.
-	//panic("sys_env_set_pgfault_upcall not implemented");
 }
 
 // Allocate a page of memory and map it at 'va' with permission
@@ -203,6 +206,8 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 	//   parameters for correctness.
 	//   If page_insert() fails, remember to free the page you
 	//   allocated!
+
+	// LAB 4: Your code here.
 	struct Env* envnow;
 	int r = envid2env(envid, &envnow, 1);
 	if(r<0){
@@ -229,8 +234,7 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 	}
 	//memset(page2kva(pp), 0, PGSIZE);	
 	return 0;
-	// LAB 4: Your code here.
-	// panic("sys_page_alloc not implemented");
+
 }
 
 // Map the page of memory at 'srcva' in srcenvid's address space
@@ -259,6 +263,8 @@ sys_page_map(envid_t srcenvid, void *srcva,
 	//   parameters for correctness.
 	//   Use the third argument to page_lookup() to
 	//   check the current permissions on the page.
+
+	// LAB 4: Your code here.
 	struct Env *srcenv, *dstenv;
 	int r1 = envid2env(srcenvid, &srcenv, 1);
 	int r2 = envid2env(dstenvid, &dstenv, 1);
@@ -296,8 +302,6 @@ sys_page_map(envid_t srcenvid, void *srcva,
 		return -E_NO_MEM;
 	}
 	return 0;
-	// LAB 4: Your code here.
-	//panic("sys_page_map not implemented");
 }
 
 // Unmap the page of memory at 'va' in the address space of 'envid'.
@@ -311,6 +315,8 @@ static int
 sys_page_unmap(envid_t envid, void *va)
 {
 	// Hint: This function is a wrapper around page_remove().
+
+	// LAB 4: Your code here.
 	struct Env* envnow;
 	int r = envid2env(envid, &envnow, 1);
 	if(r < 0) {
@@ -321,8 +327,6 @@ sys_page_unmap(envid_t envid, void *va)
     	return -E_INVAL;
 	page_remove(envnow->env_pml4e, va);
 	return 0;
-	// LAB 4: Your code here.
-	//panic("sys_page_unmap not implemented");
 }
 
 // Try to send 'value' to the target env 'envid'.
@@ -366,6 +370,7 @@ sys_page_unmap(envid_t envid, void *va)
 static int
 sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 {
+	// LAB 4: Your code here.
 	struct Env *recvr;
 	int r = envid2env(envid, &recvr, 0);	
 	if (r < 0) {
@@ -404,8 +409,6 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 	recvr->env_ipc_value = value;
 	recvr->env_status = ENV_RUNNABLE;
 	return 0;
-	// LAB 4: Your code here.
-	// panic("sys_ipc_try_send not implemented");
 }
 
 // Block until a value is ready.  Record that you want to receive
@@ -422,6 +425,7 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 static int
 sys_ipc_recv(void *dstva)
 {
+	// LAB 4: Your code here.
 	curenv->env_ipc_recving = 1;
 	if(dstva < (void*)UTOP) {
 		if(PGOFF(dstva))
@@ -431,12 +435,85 @@ sys_ipc_recv(void *dstva)
 	curenv->env_status = ENV_NOT_RUNNABLE;
 	curenv->env_tf.tf_regs.reg_rax = 0;
 	sched_yield();
-	// LAB 4: Your code here.
-	//panic("sys_ipc_recv not implemented");
 	return 0;
 }
 
+// Return the current time.
+static int
+sys_time_msec(void)
+{
+	// LAB 6: Your code here.
+	panic("sys_time_msec not implemented");
+}
 
+
+// Maps a page from the evnironment corresponding to envid into the guest vm 
+// environments phys addr space. 
+//
+//
+// Return 0 on success, < 0 on error.  Errors are:
+//	-E_BAD_ENV if srcenvid and/or guest doesn't currently exist,
+//		or the caller doesn't have permission to change one of them.
+//	-E_INVAL if srcva >= UTOP or srcva is not page-aligned,
+//		or guest_pa >= guest physical size or guest_pa is not page-aligned.
+//	-E_INVAL is srcva is not mapped in srcenvid's address space.
+//	-E_INVAL if perm is inappropriate 
+//	-E_INVAL if (perm & PTE_W), but srcva is read-only in srcenvid's
+//		address space.
+//	-E_NO_MEM if there's no memory to allocate any necessary page tables. 
+//
+// Hint: The TA solution uses ept_map_hva2gpa().  A guest environment uses 
+//       env_pml4e to store the root of the extended page tables.
+// 
+#ifndef VMM_GUEST
+static void
+sys_vmx_list_vms() {
+	vmx_list_vms();
+}
+
+static bool
+sys_vmx_sel_resume(int i) {
+	return vmx_sel_resume(i);
+}
+
+static int
+sys_vmx_get_vmdisk_number() {
+	return vmx_get_vmdisk_number();
+}
+
+static void
+sys_vmx_incr_vmdisk_number() {
+	vmx_incr_vmdisk_number();
+}
+
+static int
+sys_ept_map(envid_t srcenvid, void *srcva,
+	    envid_t guest, void* guest_pa, int perm)
+{
+		/* Your code here */
+		panic ("sys_ept_map not implemented");
+		return 0;
+}
+
+static envid_t
+	sys_env_mkguest(uint64_t gphysz, uint64_t gRIP) {
+	int r;
+	struct Env *e;
+
+	// Check if the processor has VMX support.
+	if ( !vmx_check_support() ) {
+		return -E_NO_VMX;
+	} else if ( !vmx_check_ept() ) {
+		return -E_NO_EPT;
+	} 
+	if ((r = env_guest_alloc(&e, curenv->env_id)) < 0)
+		return r;
+	e->env_status = ENV_NOT_RUNNABLE;
+	e->env_vmxinfo.phys_sz = gphysz;
+	e->env_tf.tf_rip = gRIP;
+	return e->env_id;
+}
+#endif //!VMM_GUEST
 
 
 // Dispatches to the correct kernel function, passing the arguments.
@@ -447,7 +524,6 @@ syscall(uint64_t syscallno, uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4, 
 	// Return any appropriate return value.
 	// LAB 3: Your code here.
 
-	//panic("syscall not implemented");
 	switch (syscallno) {
 	case SYS_cputs :
 		sys_cputs((const char *)a1, (size_t)a2);
@@ -478,8 +554,34 @@ syscall(uint64_t syscallno, uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4, 
 		return sys_ipc_recv((void*)a1);
 	case SYS_env_set_trapframe:
 		return sys_env_set_trapframe((envid_t)a1, (struct Trapframe *)a2);
+#ifndef VMM_GUEST
+	case SYS_ept_map:
+		return sys_ept_map(a1, (void*) a2, a3, (void*) a4, a5);
+	case SYS_env_mkguest:
+		return sys_env_mkguest(a1, a2);
+	case SYS_vmx_list_vms:
+		sys_vmx_list_vms();
+		return 0;
+	case SYS_vmx_sel_resume:
+		return sys_vmx_sel_resume(a1);
+	case SYS_vmx_get_vmdisk_number:
+		return sys_vmx_get_vmdisk_number();
+	case SYS_vmx_incr_vmdisk_number:
+		sys_vmx_incr_vmdisk_number();
+		return 0;
+#endif
+		
 	default:
-		return -E_INVAL;
+		return -E_NO_SYS;
 	}
 }
+
+#ifdef TEST_EPT_MAP
+int
+_export_sys_ept_map(envid_t srcenvid, void *srcva,
+		    envid_t guest, void* guest_pa, int perm)
+{
+	return sys_ept_map(srcenvid, srcva, guest, guest_pa, perm);
+}
+#endif
 

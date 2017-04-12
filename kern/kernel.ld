@@ -14,7 +14,7 @@ SECTIONS
     .bootstrap : {
         obj/kern/bootstrap.o (.text .data .bss)
     }
-
+    
 	/* Link the kernel at this address: "." means the current address */
 	. = 0x8004200000;
 

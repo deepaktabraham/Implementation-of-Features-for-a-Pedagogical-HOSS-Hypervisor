@@ -17,10 +17,16 @@
 #include <kern/picirq.h>
 #include <kern/cpu.h>
 #include <kern/spinlock.h>
+#include <kern/time.h>
+#include <kern/pci.h>
+#if defined(TEST_EPT_MAP)
+int test_ept_map(void);
+#endif
 
 uint64_t end_debug;
 
 static void boot_aps(void);
+
 // Test the stack backtrace function (lab 1 only)
 void
 test_backtrace(int x)
@@ -36,7 +42,7 @@ test_backtrace(int x)
 void
 i386_init(void)
 {
-    /* __asm __volatile("int $12"); */
+	/* __asm __volatile("int $12"); */
 
 	extern char edata[], end[];
 
@@ -51,9 +57,22 @@ i386_init(void)
 
 	cprintf("6828 decimal is %o octal!\n", 6828);
 
-    extern char end[];
-    end_debug = read_section_headers((0x10000+KERNBASE), (uintptr_t)end); 
+#ifdef VMM_GUEST
+	/* Guest VMX extension exposure check */
+	{
+		uint32_t ecx = 0;
+		cpuid(0x1, NULL, NULL, &ecx, NULL);
+		if (ecx & 0x20)
+			panic("[ERR] VMX extension exposed to guest.\n");
+		else
+			cprintf("VMX extension hidden from guest.\n");
+	}
+#endif
 
+#ifndef VMM_GUEST
+	extern char end[];
+	end_debug = read_section_headers((0x10000+KERNBASE), (uintptr_t)end); 
+#endif
 
 	// Test the stack backtrace function (lab 1 only)
 	test_backtrace(5);
@@ -64,18 +83,26 @@ i386_init(void)
 	env_init();
 	trap_init();
 
+#ifndef VMM_GUEST
 	// Lab 4 multiprocessor initialization functions
 	mp_init();
 	lapic_init();
+#endif
 
 	// Lab 4 multitasking initialization functions
 	pic_init();
 
+	// Lab 6 hardware initialization functions
+	time_init();
+	pci_init();
+
 	// Acquire the big kernel lock before waking up APs
 	// Your code here:
 	lock_kernel();
+#ifndef VMM_GUEST
 	// Starting non-boot CPUs
 	boot_aps();
+#endif
 
 	// Start fs.
 	ENV_CREATE(fs_fs, ENV_TYPE_FS);
@@ -85,6 +112,10 @@ i386_init(void)
 	ENV_CREATE(TEST, ENV_TYPE_USER);
 #else
 	// Touch all you want.
+#if defined(TEST_EPT_MAP)
+	test_ept_map();
+#endif
+
 	ENV_CREATE(user_icode, ENV_TYPE_USER);
 #endif // TEST*
 
@@ -139,12 +170,12 @@ mp_main(void)
 	trap_init_percpu();
 	xchg(&thiscpu->cpu_status, CPU_STARTED); // tell boot_aps() we're up
 
-	lock_kernel();
 	// Now that we have finished some basic setup, call sched_yield()
 	// to start running processes on this CPU.  But make sure that
 	// only one CPU can enter the scheduler at a time!
 	//
 	// Your code here:
+	lock_kernel();
 	sched_yield();
 	// Remove this after you finish Exercise 4
 	// for (;;);
