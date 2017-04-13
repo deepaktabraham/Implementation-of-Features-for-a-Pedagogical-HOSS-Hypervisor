@@ -69,12 +69,20 @@ void
 flush_block(void *addr)
 {
 	uint64_t blockno = ((uint64_t)addr - DISKMAP) / BLKSIZE;
+	int r;	
 
 	if (addr < (void*)DISKMAP || addr >= (void*)(DISKMAP + DISKSIZE))
 		panic("flush_block of bad va %08x", addr);
 
 	// LAB 5: Your code here.
-	panic("flush_block not implemented");
+	addr = ROUNDDOWN(addr,BLKSIZE);
+	if (va_is_mapped(addr) && va_is_dirty(addr))
+
+		ide_write(blockno*BLKSECTS, addr, BLKSECTS);
+	if(va_is_mapped(addr)) {
+		if ((r = sys_page_map(0,addr,0,addr,PTE_SYSCALL&~PTE_D))<0)
+			cprintf("error in flushing the block : %e\n",r);
+	}
 }
 
 // Test that the block cache works, by smashing the superblock and
