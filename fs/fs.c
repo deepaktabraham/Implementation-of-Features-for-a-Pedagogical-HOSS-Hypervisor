@@ -186,8 +186,12 @@ file_get_block(struct File *f, uint32_t filebno, char **blk)
 	int r = file_block_walk(f, filebno, &ppdiskbno, false);
 	if (r < 0)
 		return r;
-    if (!*ppdiskbno)
-        return -E_NO_DISK;
+	if (!*ppdiskbno){
+		uint32_t blknum = alloc_block();
+		if (blknum < 0)
+			return -E_NO_DISK;
+		*ppdiskbno = blknum;
+	}
 	*blk = (char*)diskaddr(*ppdiskbno);
 	return 0;
 
