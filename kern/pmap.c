@@ -229,7 +229,7 @@ boot_alloc(uint32_t n)
         uint32_t newSize = ROUNDUP(n, PGSIZE);
         //cprintf("%p \n %p \n %p \n %p", nextfree+newSize, KADDR(0xfefd000), KADDR(0x100000), PADDR(KERNBASE));
         //last address of the usable address space that the e820 map gives.
-        if(nextfree + newSize > (char*)KADDR(0xfefd000))
+        if(PADDR(nextfree + newSize) > (uint64_t)(npages * PGSIZE))
             panic("No memory available in boot_alloc");
         nextfree = nextfree + newSize;
     }    
