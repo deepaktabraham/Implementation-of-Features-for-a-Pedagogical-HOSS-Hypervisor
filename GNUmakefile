@@ -245,7 +245,7 @@ print-gdbport:
 
 # For deleting the build
 clean:
-	rm -rf $(OBJDIR) .gdbinit jos.in qemu.log jos.out* bochs.*
+	rm -rf $(OBJDIR) .gdbinit jos.in qemu.log jos.out* bochs.* memory.map memory_guest.map
 	rm -rf bochsrc $(GUESTDIR)/$(OBJDIR)
 
 realclean: clean
