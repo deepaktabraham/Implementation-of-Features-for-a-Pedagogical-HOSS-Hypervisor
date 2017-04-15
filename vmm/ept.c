@@ -47,10 +47,30 @@ static inline int epte_present(epte_t epte)
 //       bit at the last level entry is sufficient (and the bookkeeping is much simpler).
 static int ept_lookup_gpa(epte_t* eptrt, void *gpa, 
 			  int create, epte_t **epte_out) {
-    /* Your code here */
-    panic("ept_lookup_gpa not implemented\n");
-    return 0;
+	/* Your code here */
+	if(!eptrt) {
+		return -E_INVAL;
+	}
 
+	pte_t* pte = pml4e_walk((pml4e_t*)eptrt, gpa, create);
+	if(!pte)
+		return -E_NO_ENT;
+
+	// change permissions, now that pages are created.
+	pml4e_t* pml = &eptrt[PML4(gpa)];
+	pdpe_t* pdpe = (pdpe_t*)KADDR(PTE_ADDR(*pml));
+	pdpe = &pdpe[PDPE(gpa)];	
+	pde_t* pde = (pde_t*) KADDR(PTE_ADDR(*pdpe)); 
+
+	eptrt[PML4(gpa)] = PTE_ADDR(*pml) | __EPTE_FULL;
+	pdpe[PDPE(gpa)] = PTE_ADDR(pdpe[PDPE(gpa)]) | __EPTE_FULL;
+	pde[PDX(gpa)] = PTE_ADDR(pde[PDX(gpa)]) | __EPTE_FULL;
+
+	if (epte_out) 
+	{
+		*epte_out = (epte_t*) pte;
+	}
+	return 0;
 }
 
 void ept_gpa2hva(epte_t* eptrt, void *gpa, void **hva) {
@@ -124,10 +144,24 @@ int ept_page_insert(epte_t* eptrt, struct PageInfo* pp, void* gpa, int perm) {
 int ept_map_hva2gpa(epte_t* eptrt, void* hva, void* gpa, int perm, 
         int overwrite) {
 
-    /* Your code here */
-    panic("ept_map_hva2gpa not implemented\n");
+	/* Your code here */
+	
+	epte_t* ept;
+	if(ept_lookup_gpa(eptrt, gpa, 1, &ept) == 0)
+	{
+		if (*ept) {
+			if (overwrite==0) 
+				return -E_INVAL;
+			else 
+				*ept = PADDR(hva)| perm | __EPTE_IPAT | __EPTE_TYPE( EPTE_TYPE_WB );
+		}
+		else 
+			*ept = PADDR(hva)| perm | __EPTE_IPAT | __EPTE_TYPE( EPTE_TYPE_WB );
 
-    return 0;
+		return 0;
+	}
+	cprintf("VC error: ept_map_hva2gpa failed\n");
+	return -E_INVAL;    
 }
 
 int ept_alloc_static(epte_t *eptrt, struct VmxGuestInfo *ginfo) {
@@ -271,7 +305,7 @@ int test_ept_map(void)
 	/* Check if the map_hva2gpa set permission correctly */
 	if ((r = ept_lookup_gpa(dstenv->env_pml4e, UTEMP, 0, &epte)) < 0)
 		panic("Failed on ept_lookup_gpa (%d)\n", r);
-	if (((uint64_t)*epte & (~EPTE_ADDR)) == (__EPTE_READ | __EPTE_TYPE( EPTE_TYPE_WB ) | __EPTE_IPAT))
+	if (((uint64_t)*epte & (~EPTE_ADDR)) == (__EPTE_READ |  __EPTE_TYPE( EPTE_TYPE_WB ) | __EPTE_IPAT))
 		cprintf("map_hva2gpa success on perm check\n");
 	else
 		panic("map_hva2gpa didn't set permission correctly\n");	

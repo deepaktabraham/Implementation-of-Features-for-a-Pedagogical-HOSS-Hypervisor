@@ -486,13 +486,100 @@ sys_vmx_incr_vmdisk_number() {
 	vmx_incr_vmdisk_number();
 }
 
+
+// Maps a page from the environment corresponding to envid into the guest vm 
+// environments phys addr space. 
+//
+//
+// Return 0 on success, < 0 on error.  Errors are:
+//	-E_BAD_ENV if srcenvid and/or guest doesn't currently exist,
+//		or the caller doesn't have permission to change one of them.
+//	-E_INVAL if srcva >= UTOP or srcva is not page-aligned,
+//		or guest_pa >= guest physical size or guest_pa is not page-aligned.
+//	-E_INVAL is guest_pa is not mapped in srcenvid's address space.
+//	-E_INVAL if perm is inappropriate 
+//	-E_INVAL if (perm & PTE_W), but srcva is read-only in srcenvid's
+//		address space.
+//	-E_NO_MEM if there's no memory to allocate any necessary page tables. 
+//
+// Hint: The TA solution uses ept_map_hva2gpa().  A guest environment uses 
+//       env_pml4e to store the root of the extended page tables.
+// 
+
 static int
 sys_ept_map(envid_t srcenvid, void *srcva,
 	    envid_t guest, void* guest_pa, int perm)
 {
-		/* Your code here */
-		panic ("sys_ept_map not implemented");
-		return 0;
+	/* Your code here */
+	
+	struct Env* srcenv = NULL;
+	struct Env* guestenv = NULL;
+	int retVal = -1;
+	pte_t* pte = NULL;
+	pte_t* hva = NULL;
+	struct PageInfo *page = NULL;
+	
+	retVal = envid2env(srcenvid, &srcenv, 1);
+	if (retVal != 0)
+	{
+		cprintf("VC error: bad srcenvid\n");	
+		return -E_BAD_ENV;
+	}
+
+	retVal = envid2env(guest, &guestenv, 1);
+	if (retVal != 0)
+	{
+		cprintf("VC error: bad guest\n");	
+		return -E_BAD_ENV;
+	}
+	
+	if ((uint64_t)srcva >= UTOP)
+	{
+		cprintf("VC error: srcva greater than max user useable va\n");
+		return -E_INVAL;
+	}
+
+	if (PGOFF(srcva))
+	{
+		cprintf("VC error: srcva is not page aligned\n");
+		return -E_INVAL;
+	}
+
+	if ((uint64_t)guest_pa >= guestenv->env_vmxinfo.phys_sz)
+	{
+		cprintf("VC error: guest_pa greater than max guest physical size\n");
+		return -E_INVAL;
+	}
+
+	if (PGOFF(guest_pa))
+	{
+		cprintf("VC error: guest_pa is not page aligned\n");
+		return -E_INVAL;
+    	}	
+		
+	page = page_lookup(srcenv->env_pml4e, srcva, &pte);
+	if (!page) 
+	{
+		cprintf("VC error: page not found\n");
+		return -E_INVAL;
+	}
+
+	if ((!perm) || ((perm & __EPTE_WRITE) && (!(*pte & PTE_W))))
+	{
+		cprintf("VC error: wrong permission\n");
+		return -E_INVAL;
+	}
+	
+	hva = page2kva(page);
+	retVal = ept_map_hva2gpa(guestenv->env_pml4e, hva, guest_pa, perm, 0);
+	if (retVal != 0) 
+	{
+		cprintf("VC error: hva to gpa failed\n");
+		return retVal;
+	}
+	
+	page->pp_ref++;
+	return 0;
 }
 
 static envid_t
