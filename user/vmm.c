@@ -19,8 +19,59 @@ static int
 map_in_guest( envid_t guest, uintptr_t gpa, size_t memsz, 
 	      int fd, size_t filesz, off_t fileoffset ) {
 	/* Your code here */
-	return -E_NO_SYS;
+	int i, r;
 
+	if (PGOFF(gpa) != 0)
+	{
+		ROUNDDOWN(gpa, PGSIZE);
+	}
+
+	//cprintf("File Size = %d, Mem Size = %d\n",filesz,memsz);
+    for (i = 0; i < memsz; i += PGSIZE) 
+    {
+    	if (i < filesz)
+    	{
+			//Allocate a blank page in FS environment to receive data
+		    r = sys_page_alloc(0, UTEMP, PTE_P | PTE_U | PTE_W);
+			if (r < 0)
+				return r;
+
+			//Seek from fileoffset position
+		    r = seek(fd, fileoffset + i);
+			if (r < 0)
+				return r;
+
+			//Read file contents page-wise into the blank page
+		    r = readn(fd, UTEMP, MIN(PGSIZE, filesz-i));
+			if (r<0) 
+				return r;
+
+			//Map page into the guest
+		    r = sys_ept_map(thisenv->env_id, (void*)UTEMP, guest, (void*) (gpa + i), __EPTE_FULL);
+			if (r < 0)
+				panic("Something wrong with map_in_guest after calling sys_ept_map: %e", r);
+
+			//Unmap page in FS environment since not needed
+		    sys_page_unmap(0, UTEMP);	   
+    	}
+
+    	else
+    	{
+    		//cprintf("File Size = %d, Mem size = %d\n",filesz, memsz);
+			r = sys_page_alloc(thisenv->env_id, (void*) UTEMP, __EPTE_FULL);
+			if (r < 0)
+				return r;
+
+	   		r = sys_ept_map(thisenv->env_id, UTEMP, guest, (void *)(gpa + i), __EPTE_FULL);
+			
+			if (r < 0)
+			panic("Something wrong with sys_ept_map: %e", r);
+	    	
+	    	sys_page_unmap(thisenv->env_id, UTEMP);
+    	}
+    	
+	}
+	return 0;
 } 
 
 // Read the ELF headers of kernel file specified by fname,
@@ -33,7 +84,52 @@ static int
 copy_guest_kern_gpa( envid_t guest, char* fname ) {
 
 	/* Your code here */
-	return -E_NO_SYS;
+	int fd,ret;
+	char data_buffer[512];
+	struct Elf* elfheader;
+
+	fd = open(fname,O_RDONLY);	
+	if (fd < 0)
+	{
+		cprintf("File does not exist\n");
+		return -E_NOT_FOUND;
+	}
+	
+	if(readn(fd,data_buffer,sizeof(data_buffer)) != sizeof(data_buffer))
+	{
+		close(fd);
+		cprintf("VC: There is something wrong in reading the file fname\n");
+		return -E_NO_SYS;
+	}
+
+	elfheader = (struct Elf*) data_buffer;
+
+	if(elfheader->e_magic != ELF_MAGIC)
+	{
+		close(fd);
+		cprintf("VC: Error in magic number of given elf file\n");
+		return -E_NO_SYS;
+	}
+
+	struct Proghdr* progheader = (struct Proghdr*)(data_buffer + elfheader->e_phoff);
+	struct Proghdr* endph = progheader + elfheader->e_phnum;
+
+	for (;progheader<endph;progheader++)
+	{
+		if (progheader->p_type == ELF_PROG_LOAD)
+		{
+			ret = map_in_guest(guest,progheader->p_pa,progheader->p_memsz,fd,progheader->p_filesz,progheader->p_offset);
+			if (ret<0)
+			{
+				close(fd);
+				cprintf("VC: Map in Guest Unsuccessful.\n");
+				return -E_NO_SYS;
+			}
+		}	
+	}
+	close(fd);
+	cprintf("VC: Copy kern to gpa success!!\n");
+	return ret;
 }
 
 void
