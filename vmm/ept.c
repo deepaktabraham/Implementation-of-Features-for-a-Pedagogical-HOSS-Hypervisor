@@ -48,27 +48,33 @@ static inline int epte_present(epte_t epte)
 static int ept_lookup_gpa(epte_t* eptrt, void *gpa, 
 			  int create, epte_t **epte_out) {
 	/* Your code here */
-	if(!eptrt) {
+	if(eptrt == NULL) 
+	{
 		return -E_INVAL;
 	}
 
-	pte_t* pte = pml4e_walk((pml4e_t*)eptrt, gpa, create);
-	if(!pte)
+	pte_t* ptentry = pml4e_walk((pml4e_t*)eptrt, gpa, create);
+	
+	if(ptentry == NULL)
+	{
 		return -E_NO_ENT;
+	}
 
 	// change permissions, now that pages are created.
-	pml4e_t* pml = &eptrt[PML4(gpa)];
-	pdpe_t* pdpe = (pdpe_t*)KADDR(PTE_ADDR(*pml));
-	pdpe = &pdpe[PDPE(gpa)];	
+	pml4e_t* pml4e = &eptrt[PML4(gpa)];
+	*pml4e |= __EPTE_FULL;
+
+	pdpe_t* pdpe = (pdpe_t*)KADDR(PTE_ADDR(*pml4e));
+	pdpe = &pdpe[PDPE(gpa)];
+	*pdpe |= __EPTE_FULL;
+
 	pde_t* pde = (pde_t*) KADDR(PTE_ADDR(*pdpe)); 
+	pde = &pde[PDX(gpa)];
+	*pde |= __EPTE_FULL;
 
-	eptrt[PML4(gpa)] = PTE_ADDR(*pml) | __EPTE_FULL;
-	pdpe[PDPE(gpa)] = PTE_ADDR(pdpe[PDPE(gpa)]) | __EPTE_FULL;
-	pde[PDX(gpa)] = PTE_ADDR(pde[PDX(gpa)]) | __EPTE_FULL;
-
-	if (epte_out) 
+	if (epte_out != NULL) 
 	{
-		*epte_out = (epte_t*) pte;
+		*epte_out = (epte_t*) ptentry;
 	}
 	return 0;
 }
@@ -147,20 +153,30 @@ int ept_map_hva2gpa(epte_t* eptrt, void* hva, void* gpa, int perm,
 	/* Your code here */
 	
 	epte_t* ept;
-	if(ept_lookup_gpa(eptrt, gpa, 1, &ept) == 0)
-	{
-		if (*ept) {
-			if (overwrite==0) 
-				return -E_INVAL;
-			else 
-				*ept = PADDR(hva)| perm | __EPTE_IPAT | __EPTE_TYPE( EPTE_TYPE_WB );
-		}
-		else 
-			*ept = PADDR(hva)| perm | __EPTE_IPAT | __EPTE_TYPE( EPTE_TYPE_WB );
 
+	if (ept_lookup_gpa(eptrt, gpa, 1, &ept) == 0)
+	{
+		if (*ept)
+		{
+			if (overwrite == 0) 
+				{
+				return -E_INVAL;
+				}
+			
+			else 
+			{
+				*ept = PADDR(hva)| perm | __EPTE_IPAT | __EPTE_TYPE( EPTE_TYPE_WB );
+			}
+		}
+		else
+		{ 
+			*ept = PADDR(hva)| perm | __EPTE_IPAT | __EPTE_TYPE( EPTE_TYPE_WB );
+		}	
 		return 0;
 	}
+
 	cprintf("VC error: ept_map_hva2gpa failed\n");
+
 	return -E_INVAL;    
 }
 
