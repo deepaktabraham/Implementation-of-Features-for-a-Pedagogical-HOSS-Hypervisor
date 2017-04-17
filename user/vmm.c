@@ -32,7 +32,7 @@ map_in_guest( envid_t guest, uintptr_t gpa, size_t memsz,
     	if (i < filesz)
     	{
 			//Allocate a blank page in FS environment to receive data
-		    r = sys_page_alloc(0, UTEMP, PTE_P | PTE_U | PTE_W);
+		    r = sys_page_alloc(thisenv->env_id, UTEMP, PTE_P | PTE_U | PTE_W);
 			if (r < 0)
 				return r;
 
@@ -52,13 +52,13 @@ map_in_guest( envid_t guest, uintptr_t gpa, size_t memsz,
 				panic("Something wrong with map_in_guest after calling sys_ept_map: %e", r);
 
 			//Unmap page in FS environment since not needed
-		    sys_page_unmap(0, UTEMP);	   
+		    sys_page_unmap(thisenv->env_id, UTEMP);	   
     	}
 
     	else
     	{
     		//cprintf("File Size = %d, Mem size = %d\n",filesz, memsz);
-			r = sys_page_alloc(0, (void*) UTEMP, __EPTE_FULL);
+			r = sys_page_alloc(thisenv->env_id, (void*) UTEMP, __EPTE_FULL);
 			if (r < 0)
 				return r;
 

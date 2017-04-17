@@ -57,11 +57,12 @@ sched_yield(void)
 		if (envs[i].env_status == ENV_RUNNABLE) 
 		{
 #ifndef VMM_GUEST
-			if (envs[i].env_type == ENV_TYPE_GUEST) {
+			if (envs[i].env_type == ENV_TYPE_GUEST) 
+			{
 				ret = vmxon();
 				if (ret==0) 
 				{
-			
+
 					if (curenv && curenv->env_status == ENV_RUNNING) 
 					{
 						curenv->env_status = ENV_RUNNABLE;
