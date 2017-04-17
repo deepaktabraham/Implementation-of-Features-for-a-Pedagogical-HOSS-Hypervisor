@@ -466,21 +466,32 @@ void asm_vmrun(struct Trapframe *tf) {
     // of cr2 of the guest.
     tf->tf_ds = curenv->env_runs;
     tf->tf_es = 0;
+
+    /*Linux kvm/vmx.c source code used as reference*/
     asm(
             "push %%rdx; push %%rbp;"
             "push %%rcx \n\t" /* placeholder for guest rcx */
             "push %%rcx \n\t"
+
 	    /* Set the VMCS rsp to the current top of the frame. */
             /* Your code here */
-            "1: \n\t"
+
+            "mov %%rsp, %c[host_rsp](%0) \n\t"
+            "vmwrite %%rsp, %%rdx \n\t" 
+
+
+            "pos1: \n\t"
             /* Reload cr2 if changed */
+
             "mov %c[cr2](%0), %%rax \n\t"
             "mov %%cr2, %%rdx \n\t"
             "cmp %%rax, %%rdx \n\t"
-            "je 2f \n\t"
+            "je pos2 \n\t"
             "mov %%rax, %%cr2 \n\t"
-            "2: \n\t"
-            /* Check if vmlaunch of vmresume is needed, set the condition code
+            "pos2: \n\t"
+
+
+            /* Check if vmlaunch or vmresume is needed, set the condition code
 	     * appropriately for use below.  
 	     * 
 	     * Hint: We store the number of times the VM has run in tf->tf_ds
@@ -489,22 +500,44 @@ void asm_vmrun(struct Trapframe *tf) {
 	     *       you can use register offset addressing mode, such as '%c[rax](%0)' 
 	     *       to simplify the pointer arithmetic.
 	     */
-	    /* Your code here */
             /* Load guest general purpose registers from the trap frame.  Don't clobber flags. 
-	     *
-	     */
+         * 
+         * Test the condition code from rflags
+         * to see if you need to execute a vmlaunch
+         * instruction, or just a vmresume.
+         * 
+         * Note: be careful in loading the guest registers
+         * that you don't do any compareison that would clobber the condition code, set
+         * above.
+         */    
 	    /* Your code here */
+            "cmpl $0x1, %c[launched](%0) \n\t"
+            "mov %c[rax](%0), %%rax \n\t"
+            "mov %c[rbx](%0), %%rbx \n\t"
+            
+            "mov %c[rdx](%0), %%rdx \n\t"
+            "mov %c[rbp](%0), %%rbp \n\t"
+            "mov %c[rsi](%0), %%rsi \n\t"
+            "mov %c[rdi](%0), %%rdi \n\t"
+            "mov %c[r8](%0), %%r8 \n\t"
+            "mov %c[r9](%0), %%r9 \n\t"
+            "mov %c[r10](%0), %%r10 \n\t"
+            "mov %c[r11](%0), %%r11 \n\t"
+            "mov %c[r12](%0), %%r12 \n\t"
+            "mov %c[r13](%0), %%r13 \n\t"
+            "mov %c[r14](%0), %%r14 \n\t"
+            "mov %c[r15](%0), %%r15 \n\t"
+
+            "mov %c[rcx](%0), %%rcx \n\t"
+
+            "je launch \n\t"
+            "vmresume \n\t"
+            "jmp done \n\t"
+            "launch: vmlaunch \n\t"
+            "done: \n\t"
+
             /* Enter guest mode */
-	    /* Your code here:
-	     * 
-	     * Test the condition code from rflags
-	     * to see if you need to execute a vmlaunch
-	     * instruction, or just a vmresume.
-	     * 
-	     * Note: be careful in loading the guest registers
-	     * that you don't do any compareison that would clobber the condition code, set
-	     * above.
-	     */
+
             ".Lvmx_return: "
 
 	    /* POST VM EXIT... */
@@ -515,7 +548,29 @@ void asm_vmrun(struct Trapframe *tf) {
 	     * Be careful that the number of pushes (above) and pops are symmetrical.
 	     */
 	    /* Your code here */
-            "pop  %%rbp; pop  %%rdx \n\t"
+
+            "mov %%rax, %c[rax](%0) \n\t"
+            "mov %%rbx, %c[rbx](%0) \n\t"
+            "pop %c[rcx](%0) \n\t"
+            "mov %%rdx, %c[rdx](%0) \n\t"
+            "mov %%rbp, %c[rbp](%0) \n\t"
+            "mov %%rsi, %c[rsi](%0) \n\t"
+            "mov %%rdi, %c[rdi](%0) \n\t"
+            "mov %%r8,  %c[r8](%0) \n\t"
+            "mov %%r9,  %c[r9](%0) \n\t"
+            "mov %%r10, %c[r10](%0) \n\t"
+            "mov %%r11, %c[r11](%0) \n\t"
+            "mov %%r12, %c[r12](%0) \n\t"
+            "mov %%r13, %c[r13](%0) \n\t"
+            "mov %%r14, %c[r14](%0) \n\t"
+            "mov %%r15, %c[r15](%0) \n\t"
+
+            "mov %%cr2, %%rax \n\t"
+            "mov %%rax, %c[cr2](%0) \n\t"
+
+           
+            "pop %%rbp; pop %%rdx \n\t"
+
 
             "setbe %c[fail](%0) \n\t"
             : : "c"(tf), "d"((unsigned long)VMCS_HOST_RSP), 
@@ -537,6 +592,7 @@ void asm_vmrun(struct Trapframe *tf) {
             [r14]"i"(offsetof(struct Trapframe, tf_regs.reg_r14)),
             [r15]"i"(offsetof(struct Trapframe, tf_regs.reg_r15)),
             [cr2]"i"(offsetof(struct Trapframe, tf_err)),
+            [host_rsp]"i"(offsetof(struct Trapframe, tf_rsp)),
             [wordsize]"i"(sizeof(uint64_t))
                 : "cc", "memory"
                     , "rax", "rbx", "rdi", "rsi"
@@ -632,7 +688,7 @@ int vmx_vmrun( struct Env *e ) {
 
     vmcs_write64( VMCS_GUEST_RSP, curenv->env_tf.tf_rsp  );
     vmcs_write64( VMCS_GUEST_RIP, curenv->env_tf.tf_rip );
-    panic ("asm vmrun incomplete\n");
+    //panic ("asm vmrun incomplete\n");
     asm_vmrun( &e->env_tf );    
     return 0;
 }
