@@ -58,7 +58,7 @@ map_in_guest( envid_t guest, uintptr_t gpa, size_t memsz,
     	else
     	{
     		//cprintf("File Size = %d, Mem size = %d\n",filesz, memsz);
-			r = sys_page_alloc(thisenv->env_id, (void*) UTEMP, __EPTE_FULL);
+			r = sys_page_alloc(0, (void*) UTEMP, __EPTE_FULL);
 			if (r < 0)
 				return r;
 

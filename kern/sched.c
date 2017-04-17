@@ -45,14 +45,42 @@ sched_yield(void)
 	// no runnable environments, simply drop through to the code
 	// below to halt the cpu.
 	idle = thiscpu->cpu_env;
-	int i = 0;
+	int i = 0,ret;
 	if(idle)
  		i = ENVX(thiscpu->cpu_env->env_id);
 	int k = 0 ;
-	while(k<NENV) {
+
+	while(k<NENV) 
+	{
 		i = (i+1)%NENV;	
-		if (envs[i].env_status == ENV_RUNNABLE) {
-			env_run(&envs[i]);
+
+		if (envs[i].env_status == ENV_RUNNABLE) 
+		{
+#ifndef VMM_GUEST
+			if (envs[i].env_type == ENV_TYPE_GUEST) {
+				ret = vmxon();
+				if (ret==0) 
+				{
+			
+					if (curenv && curenv->env_status == ENV_RUNNING) 
+					{
+						curenv->env_status = ENV_RUNNABLE;
+    				}
+
+ 		    		curenv = &envs[i];
+					curenv->env_status = ENV_RUNNING;
+					curenv->env_runs++;
+					cprintf("vmx_vmrun called!!\n");
+		    		vmx_vmrun(&envs[i]);		    		
+				}
+			}
+			else 
+			{
+#endif
+				env_run(&envs[i]);
+#ifndef VMM_GUEST
+			}
+#endif
 			return;
 		}
 		k++;
