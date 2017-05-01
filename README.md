@@ -6,11 +6,11 @@ The HOSS hypervisor is developed by leveraging the Intel VT-x hardware extension
 This implementation is adapted for the Intel x86_64 architecture.
 
 ### The following features have been implemented -
-•	Check for VMX support<br />
-• Check for Extended Page Table support<br />
-• Modifcations for scheduling a guest environment<br />
-•	Implementation of Extended Page Table for handling Guest to Host physical address mappings<br />
-• Assembly code to launch the Guest environment, by mapping JOS guest kernel and bootloader into the Virtual Machine’s memory segment<br />
+1 - Check for VMX support<br />
+2 - Check for Extended Page Table support<br />
+3 - Modifcations for scheduling a guest environment<br />
+4 -	Implementation of Extended Page Table for handling Guest to Host physical address mappings<br />
+5 - Assembly code to launch the Guest environment, by mapping JOS guest kernel and bootloader into the Virtual Machine’s memory segment<br />
 
 To run the JOS kernel: `make bochs`<br />
 To launch the Guest VM after the JOS kernel boots up: `vmm`<br />
