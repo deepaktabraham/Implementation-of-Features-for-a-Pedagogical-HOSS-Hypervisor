@@ -13,8 +13,8 @@ This implementation is adapted for the Intel x86_64 architecture. Testing can be
 5 - Assembly code to launch the Guest environment, by mapping JOS guest kernel and bootloader into the Virtual Machine’s memory segment<br />
 
 ### Steps
-To run the JOS kernel: `make bochs`<br />
-To launch the Guest VM after the JOS kernel boots up: `vmm`<br />
+To run the JOS kernel: **`make bochs`**<br />
+To launch the Guest VM after the JOS kernel boots up: **`vmm`**<br />
 
 Implementation is based on the CSE591-Virtualization course at Stony Brook University.<br />
 < https://www3.cs.stonybrook.edu/~porter/courses/cse591/s14/lab1.html >
